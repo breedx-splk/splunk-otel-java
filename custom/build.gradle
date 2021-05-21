@@ -13,7 +13,7 @@ dependencies {
   compileOnly("io.opentelemetry:opentelemetry-sdk-extension-autoconfigure:${versions.opentelemetryAlpha}")
   compileOnly("io.opentelemetry:opentelemetry-semconv:${versions.opentelemetryAlpha}")
   compileOnly("io.opentelemetry.instrumentation:opentelemetry-instrumentation-api:${versions.opentelemetryJavaagentAlpha}")
-  compileOnly("io.opentelemetry.javaagent:opentelemetry-javaagent-spi:${versions.opentelemetryJavaagentAlpha}")
+  compileOnly("io.opentelemetry.javaagent:opentelemetry-javaagent-extension-api:${versions.opentelemetryJavaagentAlpha}")
   annotationProcessor deps.autoservice
   compileOnly deps.autoservice
 
@@ -30,18 +30,24 @@ dependencies {
   testImplementation("io.opentelemetry:opentelemetry-sdk-testing:${versions.opentelemetry}")
   testImplementation("io.opentelemetry:opentelemetry-sdk-extension-autoconfigure:${versions.opentelemetryAlpha}")
   testImplementation("io.opentelemetry.instrumentation:opentelemetry-instrumentation-api:${versions.opentelemetryJavaagentAlpha}")
-  testImplementation("io.opentelemetry.javaagent:opentelemetry-javaagent-spi:${versions.opentelemetryJavaagentAlpha}")
+  testImplementation("io.opentelemetry.javaagent:opentelemetry-javaagent-extension-api:${versions.opentelemetryJavaagentAlpha}")
   testImplementation("io.micrometer:micrometer-core:${versions.micrometer}")
 
   testImplementation(project(':testing:common'))
   testImplementation group: 'javax.servlet', name: 'javax.servlet-api', version: '3.0.1'
   testImplementation group: 'org.eclipse.jetty', name: 'jetty-server', version: '8.0.0.v20110901'
-  testImplementation group: 'org.eclipse.jetty', name: 'jetty-servlet', version: '8.0.0.v20110901'
+  testImplementation group: 'org.eclipse.jetty', name: 'jetty-servlet', version: '11.0.3'
 }
 
 tasks {
   compileJava {
     options.release.set(8)
+  }
+
+  processResources {
+    expand([
+        'version': project.version
+    ])
   }
 
   shadowJar {
