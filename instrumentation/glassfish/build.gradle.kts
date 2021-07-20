@@ -3,5 +3,5 @@ plugins {
 }
 
 dependencies {
-  compileOnly("org.glassfish.main.common:common-util:5.0")
+  compileOnly("org.glassfish.main.common:common-util:6.2.0")
 }
