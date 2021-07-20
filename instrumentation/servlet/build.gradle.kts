@@ -3,7 +3,7 @@ plugins {
 }
 
 dependencies {
-  compileOnly("javax.servlet:servlet-api:2.2")
+  compileOnly("javax.servlet:servlet-api:2.5")
 
   implementation(project(":instrumentation:common"))
 
@@ -14,7 +14,7 @@ dependencies {
   testImplementation("io.opentelemetry.javaagent:opentelemetry-testing-common")
 
   // Use servlet 2.3 to test Filters too
-  testImplementation("javax.servlet:servlet-api:2.3")
+  testImplementation("javax.servlet:servlet-api:2.5")
   testImplementation("org.eclipse.jetty:jetty-servlet:7.0.0.v20091005")
   testImplementation("org.eclipse.jetty:jetty-server:7.0.0.v20091005")
 }

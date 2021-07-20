@@ -3,5 +3,5 @@ plugins {
 }
 
 dependencies {
-  compileOnly("javax.servlet:servlet-api:2.2")
+  compileOnly("javax.servlet:servlet-api:2.5")
 }
