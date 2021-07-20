@@ -3,7 +3,7 @@ plugins {
 }
 
 dependencies {
-  compileOnly("io.netty:netty-codec-http:4.0.0.Final")
+  compileOnly("io.netty:netty-codec-http:4.1.66.Final")
   compileOnly("io.opentelemetry.javaagent.instrumentation:opentelemetry-javaagent-netty-4.0")
 
   implementation(project(":instrumentation:common"))
