@@ -42,8 +42,9 @@ class LogEntryCreatorTest {
     Instant time = Instant.now();
     String stack = "the.stack";
 
-    String spanId = "zzzyyyzzz";
+    int traceFlags = 0x42;
     String traceId = "abc123";
+    String spanId = "zzzyyyzzz";
 
     long threadId = 987L;
     EventType eventType = mock(EventType.class);
@@ -65,6 +66,7 @@ class LogEntryCreatorTest {
             "otel.profiling");
     LogEntry expected =
         LogEntry.builder()
+            .traceFlags(traceFlags)
             .traceId(traceId)
             .spanId(spanId)
             .name(PROFILING_SOURCE)
