@@ -13,7 +13,7 @@ muzzle {
 }
 
 dependencies {
-  compileOnly("org.apache.commons:commons-dbcp2:2.0")
+  compileOnly("org.apache.commons:commons-dbcp2:2.9.0")
   implementation(project(":instrumentation:common"))
 
   testImplementation("org.apache.commons:commons-dbcp2:2.0")
