@@ -25,6 +25,6 @@ dependencies {
 
   // Use servlet 2.3 to test Filters too
   testImplementation("javax.servlet:servlet-api:2.3")
-  testImplementation("org.eclipse.jetty:jetty-servlet:7.0.0.v20091005")
+  testImplementation("org.eclipse.jetty:jetty-servlet:11.0.9")
   testImplementation("org.eclipse.jetty:jetty-server:7.0.0.v20091005")
 }
