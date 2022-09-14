@@ -7,7 +7,7 @@ plugins {
 // enable muzzle once it's somehow fixed
 
 dependencies {
-  compileOnly("io.netty:netty-codec-http:4.1.0.Final")
+  compileOnly("io.netty:netty-codec-http:4.1.82.Final")
   compileOnly("io.opentelemetry.javaagent.instrumentation:opentelemetry-javaagent-netty-4.1")
   compileOnly("io.opentelemetry.javaagent.instrumentation:opentelemetry-javaagent-netty-4-common")
 
