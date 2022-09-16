@@ -46,7 +46,7 @@ dependencies {
   testImplementation(project(":testing:common"))
   testImplementation("javax.servlet:javax.servlet-api:3.0.1")
   testImplementation("org.eclipse.jetty:jetty-server:8.0.0.v20110901")
-  testImplementation("org.eclipse.jetty:jetty-servlet:8.0.0.v20110901")
+  testImplementation("org.eclipse.jetty:jetty-servlet:11.0.12")
 }
 
 sourceSets {
