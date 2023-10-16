@@ -12,10 +12,10 @@ muzzle {
 }
 
 dependencies {
-  compileOnly("com.oracle.database.jdbc:ucp:11.2.0.4")
+  compileOnly("com.oracle.database.jdbc:ucp:23.3.0.23.09")
   implementation(project(":instrumentation:common"))
 
-  testImplementation("com.oracle.database.jdbc:ucp:11.2.0.4")
+  testImplementation("com.oracle.database.jdbc:ucp:23.3.0.23.09")
 }
 
 tasks {
