@@ -13,7 +13,7 @@ muzzle {
 }
 
 dependencies {
-  compileOnly("org.apache.tomcat:tomcat-catalina:9.0.40")
+  compileOnly("org.apache.tomcat:tomcat-catalina:10.1.16")
   implementation(project(":instrumentation:common"))
 
   testImplementation("org.apache.tomcat.embed:tomcat-embed-core:9.0.40")
