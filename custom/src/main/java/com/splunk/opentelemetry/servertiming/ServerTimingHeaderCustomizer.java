@@ -17,11 +17,13 @@
 package com.splunk.opentelemetry.servertiming;
 
 import com.google.auto.service.AutoService;
+import com.splunk.opentelemetry.javaagent.bootstrap.WebengineHolder;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.propagation.W3CTraceContextPropagator;
 import io.opentelemetry.context.Context;
 import io.opentelemetry.javaagent.bootstrap.http.HttpServerResponseCustomizer;
 import io.opentelemetry.javaagent.bootstrap.http.HttpServerResponseMutator;
+import java.util.logging.Logger;
 
 /**
  * Adds {@code Server-Timing} header (and {@code Access-Control-Expose-Headers}) to the HTTP
@@ -31,6 +33,7 @@ import io.opentelemetry.javaagent.bootstrap.http.HttpServerResponseMutator;
 public class ServerTimingHeaderCustomizer implements HttpServerResponseCustomizer {
   static final String SERVER_TIMING = "Server-Timing";
   static final String EXPOSE_HEADERS = "Access-Control-Expose-Headers";
+  private static final Logger logger = Logger.getLogger(ServerTimingHeaderCustomizer.class.getName());
 
   // not using volatile because this field is set only once during agent initialization
   static boolean enabled = false;
@@ -38,12 +41,22 @@ public class ServerTimingHeaderCustomizer implements HttpServerResponseCustomize
   @Override
   public <RESPONSE> void customize(
       Context context, RESPONSE response, HttpServerResponseMutator<RESPONSE> responseMutator) {
-    if (!enabled || !Span.fromContext(context).getSpanContext().isValid()) {
+    logger.info("SWAT7805 - Header customizer engaged.");
+    if (!enabled) {
+      logger.info("SWAT7805 - Not adding server timing header due to not enabled");
+      return;
+    }
+    if (!Span.fromContext(context).getSpanContext().isValid()) {
+      logger.info("SWAT7805 - Not adding server timing header due to invalid context!");
       return;
     }
 
-    responseMutator.appendHeader(response, SERVER_TIMING, toHeaderValue(context));
+    logger.info("SWAT7805 - Adding server header!");
+    String headerValue = toHeaderValue(context);
+    logger.info("SWAT7805 - Server header value: " + headerValue);
+    responseMutator.appendHeader(response, SERVER_TIMING, headerValue);
     responseMutator.appendHeader(response, EXPOSE_HEADERS, SERVER_TIMING);
+    logger.info("SWAT7805 - Header customizer exiting");
   }
 
   private static String toHeaderValue(Context context) {
