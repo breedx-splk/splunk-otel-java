@@ -12,7 +12,10 @@ muzzle {
 }
 
 dependencies {
+  compileOnly(project(":custom"))
   compileOnly("io.opentelemetry:opentelemetry-api")
+  implementation("io.opentelemetry.semconv:opentelemetry-semconv-incubating")
+  library("com.microsoft.sqlserver:mssql-jdbc:6.1.0.jre8")
 
   testInstrumentation("io.opentelemetry.javaagent.instrumentation:opentelemetry-javaagent-jdbc")
 
