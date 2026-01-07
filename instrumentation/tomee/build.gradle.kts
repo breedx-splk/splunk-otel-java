@@ -4,5 +4,5 @@ plugins {
 }
 
 dependencies {
-  compileOnly("org.apache.tomee:openejb-core:8.0.6")
+  compileOnly("org.apache.tomee:openejb-core:9.1.1")
 }
