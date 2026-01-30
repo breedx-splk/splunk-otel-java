@@ -24,12 +24,15 @@ import static io.opentelemetry.semconv.incubating.OsIncubatingAttributes.OS_TYPE
 import static io.opentelemetry.semconv.incubating.OsIncubatingAttributes.OS_VERSION;
 import static io.opentelemetry.semconv.incubating.ServiceIncubatingAttributes.SERVICE_NAMESPACE;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.api.common.Attributes;
 import io.opentelemetry.instrumentation.testing.internal.AutoCleanupExtension;
 import io.opentelemetry.opamp.client.OpampClient;
 import io.opentelemetry.opamp.client.internal.response.MessageData;
+import io.opentelemetry.sdk.autoconfigure.spi.ConfigProperties;
 import io.opentelemetry.sdk.resources.Resource;
 import io.opentelemetry.testing.internal.armeria.common.HttpResponse;
 import io.opentelemetry.testing.internal.armeria.common.HttpStatus;
@@ -99,6 +102,8 @@ class OpampActivatorTest {
         Collections.singletonMap(
             "test-key",
             new AgentConfigFile.Builder().body(ByteString.encodeUtf8("test-value")).build());
+    ConfigProperties config = mock();
+    when(config.getString("splunk.opamp.endpoint")).thenReturn(server.httpUri().toString());
     ServerToAgent response =
         new ServerToAgent.Builder()
             .remote_config(
@@ -111,7 +116,7 @@ class OpampActivatorTest {
     CompletableFuture<MessageData> result = new CompletableFuture<>();
     OpampClient client =
         OpampActivator.startOpampClient(
-            server.httpUri().toString(),
+            config,
             resource,
             new OpampClient.Callbacks() {
               @Override

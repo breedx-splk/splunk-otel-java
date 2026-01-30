@@ -16,6 +16,8 @@
 
 package com.splunk.opentelemetry.opamp;
 
+import static com.splunk.opentelemetry.SplunkConfiguration.PROFILER_ENABLED_PROPERTY;
+import static io.opentelemetry.opamp.client.internal.request.service.HttpRequestService.DEFAULT_DELAY_BETWEEN_RETRIES;
 import static io.opentelemetry.sdk.autoconfigure.AutoConfigureUtil.getConfig;
 import static io.opentelemetry.sdk.autoconfigure.AutoConfigureUtil.getResource;
 import static io.opentelemetry.semconv.ServiceAttributes.SERVICE_NAME;
@@ -26,21 +28,32 @@ import static io.opentelemetry.semconv.incubating.OsIncubatingAttributes.OS_TYPE
 import static io.opentelemetry.semconv.incubating.OsIncubatingAttributes.OS_VERSION;
 import static io.opentelemetry.semconv.incubating.ServiceIncubatingAttributes.SERVICE_INSTANCE_ID;
 import static io.opentelemetry.semconv.incubating.ServiceIncubatingAttributes.SERVICE_NAMESPACE;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.logging.Level.WARNING;
 
 import com.google.auto.service.AutoService;
+import com.splunk.opentelemetry.SplunkConfiguration;
 import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.javaagent.extension.AgentListener;
 import io.opentelemetry.opamp.client.OpampClient;
 import io.opentelemetry.opamp.client.OpampClientBuilder;
 import io.opentelemetry.opamp.client.internal.connectivity.http.OkHttpSender;
+import io.opentelemetry.opamp.client.internal.request.delay.PeriodicDelay;
 import io.opentelemetry.opamp.client.internal.request.service.HttpRequestService;
 import io.opentelemetry.opamp.client.internal.response.MessageData;
+import io.opentelemetry.opamp.client.internal.state.State;
 import io.opentelemetry.sdk.autoconfigure.AutoConfiguredOpenTelemetrySdk;
 import io.opentelemetry.sdk.autoconfigure.spi.ConfigProperties;
 import io.opentelemetry.sdk.resources.Resource;
+import java.time.Duration;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.logging.Logger;
+import okio.ByteString;
+import opamp.proto.AgentConfigFile;
+import opamp.proto.AgentConfigMap;
 import opamp.proto.ServerErrorResponse;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 @AutoService(AgentListener.class)
@@ -59,9 +72,8 @@ public class OpampActivator implements AgentListener {
 
     Resource resource = getResource(autoConfiguredOpenTelemetrySdk);
 
-    String endpoint = config.getString(OP_AMP_ENDPOINT);
     startOpampClient(
-        endpoint,
+        config,
         resource,
         new OpampClient.Callbacks() {
           @Override
@@ -84,12 +96,17 @@ public class OpampActivator implements AgentListener {
   }
 
   static OpampClient startOpampClient(
-      String endpoint, Resource resource, OpampClient.Callbacks callbacks) {
+      ConfigProperties config, Resource resource, OpampClient.Callbacks callbacks) {
+
+    String endpoint = config.getString(OP_AMP_ENDPOINT);
 
     OpampClientBuilder builder = OpampClient.builder();
     builder.enableRemoteConfig();
     if (endpoint != null) {
-      builder.setRequestService(HttpRequestService.create(OkHttpSender.create(endpoint)));
+      OkHttpSender okhttp = OkHttpSender.create(endpoint);
+      PeriodicDelay pollDuration = PeriodicDelay.ofFixedDuration(Duration.ofSeconds(10));
+      HttpRequestService httpSender = HttpRequestService.create(okhttp, pollDuration, DEFAULT_DELAY_BETWEEN_RETRIES);
+      builder.setRequestService(httpSender);
     }
     addIdentifying(builder, resource, DEPLOYMENT_ENVIRONMENT_NAME);
     addIdentifying(builder, resource, SERVICE_NAME);
@@ -101,7 +118,34 @@ public class OpampActivator implements AgentListener {
     addNonIdentifying(builder, resource, OS_TYPE);
     addNonIdentifying(builder, resource, OS_VERSION);
 
+    State.EffectiveConfig effectiveConfig = buildEffectiveConfig(config);
+    builder.setEffectiveConfigState(effectiveConfig);
+
     return builder.build(callbacks);
+  }
+
+  private static State.EffectiveConfig buildEffectiveConfig(ConfigProperties config) {
+    return new State.EffectiveConfig() {
+      @Override
+      public opamp.proto.EffectiveConfig get() {
+        Map<String, AgentConfigFile> configItems = new HashMap<>();
+        ByteString body = buildConfigBodyFromConfigProps(config);
+        AgentConfigFile file = new AgentConfigFile(body, "text/plain?");
+        configItems.put("config", file);
+        AgentConfigMap configMap = new AgentConfigMap(configItems);
+        return new opamp.proto.EffectiveConfig(configMap);
+      }
+    };
+  }
+
+  @NotNull
+  private static ByteString buildConfigBodyFromConfigProps(ConfigProperties config) {
+    StringBuilder sb = new StringBuilder();
+    sb.append(PROFILER_ENABLED_PROPERTY.toUpperCase().replace('.', '_'))
+        .append("=")
+        .append(SplunkConfiguration.isProfilerEnabled(config));
+    // TODO: Additional configs that are useful can be included here...
+    return new ByteString(sb.toString().getBytes(UTF_8));
   }
 
   static void addIdentifying(
