@@ -23,6 +23,7 @@ import static java.util.logging.Level.WARNING;
 
 import com.google.auto.service.AutoService;
 import com.google.common.annotations.VisibleForTesting;
+import com.splunk.opentelemetry.opamp.ProfilerBridge;
 import com.splunk.opentelemetry.profiler.allocation.exporter.AllocationEventExporter;
 import com.splunk.opentelemetry.profiler.allocation.exporter.PprofAllocationEventExporter;
 import com.splunk.opentelemetry.profiler.context.SpanContextualizer;
@@ -56,6 +57,8 @@ public class JfrActivator implements AgentListener {
       java.util.logging.Logger.getLogger(JfrActivator.class.getName());
   private final ExecutorService executor;
   private final JFR jfr;
+  private EffectiveProfilerConfiguration effectiveConfig;
+  private RecordingSequencer sequencer;
 
   public JfrActivator() {
     this(JFR.getInstance(), HelpfulExecutors.newSingleThreadExecutor("JFR Profiler"));
@@ -69,7 +72,19 @@ public class JfrActivator implements AgentListener {
 
   @Override
   public void afterAgent(AutoConfiguredOpenTelemetrySdk sdk) {
+
+    ProfilerBridge.setStart(
+        () -> {
+          // When start is called, this means that we have been enabled....
+          // Have to force this before checking for takeoff. Fun.
+          effectiveConfig.setEnabled(true);
+          logger.warning("Profiling effective config enabled -> true");
+          afterAgent(sdk);
+        });
+
+    ProfilerGlobalState.setSdk(sdk);
     ProfilerConfiguration config = getProfilerConfiguration(sdk);
+    ProfilerBridge.setConfig(config);
 
     if (notClearForTakeoff(config)) {
       return;
@@ -79,17 +94,41 @@ public class JfrActivator implements AgentListener {
     logger.info("Profiler is active.");
     setupContextStorage();
 
+    ProfilerBridge.setStop(
+        () -> {
+          logger.warning("Attempting to shut down JFR sequencer...");
+          sequencer.shutdown();
+          effectiveConfig.setEnabled(false);
+        });
+
     startJfr(getResource(sdk), config);
+    ProfilerGlobalState.setActivator(this);
   }
 
-  private static ProfilerConfiguration getProfilerConfiguration(
-      AutoConfiguredOpenTelemetrySdk sdk) {
+  public void shutdown() {
+    if (sequencer != null) {
+      sequencer.shutdown();
+    }
+    executor.shutdown();
+    ProfilerGlobalState.setActivator(null);
+  }
+
+  private ProfilerConfiguration getProfilerConfiguration(AutoConfiguredOpenTelemetrySdk sdk) {
+
+    ProfilerConfiguration delegate;
     if (ProfilerDeclarativeConfiguration.SUPPLIER.isConfigured()) {
-      return ProfilerDeclarativeConfiguration.SUPPLIER.get();
+      delegate = ProfilerDeclarativeConfiguration.SUPPLIER.get();
     } else {
       ConfigProperties configProperties = AutoConfigureUtil.getConfig(sdk);
-      return new ProfilerEnvVarsConfiguration(configProperties);
+      delegate = new ProfilerEnvVarsConfiguration(configProperties);
     }
+
+    if (effectiveConfig == null) {
+      effectiveConfig = new EffectiveProfilerConfiguration(delegate);
+    } else {
+      effectiveConfig = effectiveConfig.replaceDelegate(delegate);
+    }
+    return effectiveConfig;
   }
 
   private void startJfr(Resource resource, ProfilerConfiguration config) {
@@ -206,6 +245,7 @@ public class JfrActivator implements AgentListener {
             .build();
 
     sequencer.start();
+    this.sequencer = sequencer;
   }
 
   private static LogRecordExporter createLogRecordExporter(Object configProperties) {

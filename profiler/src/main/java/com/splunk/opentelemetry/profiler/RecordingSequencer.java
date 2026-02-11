@@ -58,6 +58,11 @@ class RecordingSequencer {
     }
   }
 
+  public void shutdown() {
+    recorder.stop();
+    this.executor.shutdown();
+  }
+
   public static Builder builder() {
     return new Builder();
   }

@@ -52,6 +52,7 @@ import java.util.logging.Logger;
 import okio.ByteString;
 import opamp.proto.AgentConfigFile;
 import opamp.proto.AgentConfigMap;
+import opamp.proto.AgentRemoteConfig;
 import opamp.proto.ServerErrorResponse;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -62,6 +63,7 @@ public class OpampActivator implements AgentListener {
 
   private static final String OP_AMP_ENABLED_PROPERTY = "splunk.opamp.enabled";
   private static final String OP_AMP_ENDPOINT = "splunk.opamp.endpoint";
+  private RemoteConfigHandler remoteConfigHandler;
 
   @Override
   public void afterAgent(AutoConfiguredOpenTelemetrySdk autoConfiguredOpenTelemetrySdk) {
@@ -69,12 +71,11 @@ public class OpampActivator implements AgentListener {
     if (!config.getBoolean(OP_AMP_ENABLED_PROPERTY, false)) {
       return;
     }
+    this.remoteConfigHandler = new RemoteConfigHandler(autoConfiguredOpenTelemetrySdk);
 
     Resource resource = getResource(autoConfiguredOpenTelemetrySdk);
 
-    startOpampClient(
-        config,
-        resource,
+    OpampClient.Callbacks callbacks =
         new OpampClient.Callbacks() {
           @Override
           public void onConnect(OpampClient opampClient) {}
@@ -91,8 +92,14 @@ public class OpampActivator implements AgentListener {
           }
 
           @Override
-          public void onMessage(OpampClient opampClient, MessageData messageData) {}
-        });
+          public void onMessage(OpampClient opampClient, MessageData messageData) {
+            AgentRemoteConfig remoteConfig = messageData.getRemoteConfig();
+            // TODO: Playing entirely too loosey goosey here...need to keep the "effective config"
+            // around, which is basically just a merge of local and remote.
+            remoteConfigHandler.handle(remoteConfig);
+          }
+        };
+    startOpampClient(config, resource, callbacks);
   }
 
   static OpampClient startOpampClient(
@@ -105,9 +112,18 @@ public class OpampActivator implements AgentListener {
     if (endpoint != null) {
       OkHttpSender okhttp = OkHttpSender.create(endpoint);
       PeriodicDelay pollDuration = PeriodicDelay.ofFixedDuration(Duration.ofSeconds(10));
-      HttpRequestService httpSender = HttpRequestService.create(okhttp, pollDuration, DEFAULT_DELAY_BETWEEN_RETRIES);
+      HttpRequestService httpSender =
+          HttpRequestService.create(okhttp, pollDuration, DEFAULT_DELAY_BETWEEN_RETRIES);
       builder.setRequestService(httpSender);
     }
+    addAgentInfo(resource, builder);
+    State.EffectiveConfig effectiveConfig = buildEffectiveConfig(config);
+    builder.setEffectiveConfigState(effectiveConfig);
+
+    return builder.build(callbacks);
+  }
+
+  private static void addAgentInfo(Resource resource, OpampClientBuilder builder) {
     addIdentifying(builder, resource, DEPLOYMENT_ENVIRONMENT_NAME);
     addIdentifying(builder, resource, SERVICE_NAME);
     addIdentifying(builder, resource, SERVICE_VERSION);
@@ -117,11 +133,6 @@ public class OpampActivator implements AgentListener {
     addNonIdentifying(builder, resource, OS_NAME);
     addNonIdentifying(builder, resource, OS_TYPE);
     addNonIdentifying(builder, resource, OS_VERSION);
-
-    State.EffectiveConfig effectiveConfig = buildEffectiveConfig(config);
-    builder.setEffectiveConfigState(effectiveConfig);
-
-    return builder.build(callbacks);
   }
 
   private static State.EffectiveConfig buildEffectiveConfig(ConfigProperties config) {
