@@ -33,6 +33,7 @@ import io.opentelemetry.opamp.client.internal.response.MessageData;
 import io.opentelemetry.sdk.autoconfigure.AutoConfiguredOpenTelemetrySdk;
 import io.opentelemetry.sdk.autoconfigure.spi.ConfigProperties;
 import io.opentelemetry.sdk.resources.Resource;
+import java.io.IOException;
 import java.time.Duration;
 import java.util.List;
 import java.util.logging.Logger;
@@ -60,7 +61,7 @@ public class OpampActivator implements AgentListener {
             OP_AMP_POLLING_INTERVAL, DEFAULT_DELAY_BETWEEN_REQUESTS.getNextDelay().toMillis());
 
     String endpoint = config.getString(OP_AMP_ENDPOINT);
-    startOpampClient(
+    OpampClient client = startOpampClient(
         endpoint,
         resource,
         pollingDuration,
@@ -82,6 +83,13 @@ public class OpampActivator implements AgentListener {
           @Override
           public void onMessage(OpampClient opampClient, MessageData messageData) {}
         });
+    Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+      try {
+        client.close();
+      } catch (IOException e) {
+        logger.log(WARNING, "Error shutting down OpAMP client", e);
+      }
+    }));
   }
 
   static OpampClient startOpampClient(
