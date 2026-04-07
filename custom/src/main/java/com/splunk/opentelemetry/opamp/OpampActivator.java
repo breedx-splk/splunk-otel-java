@@ -180,9 +180,8 @@ public class OpampActivator implements AgentListener {
             });
   }
 
-
   private static State.EffectiveConfig buildEffectiveConfig(ConfigProperties config) {
-    //TODO: This probably doesn't handle declarative config (yaml) correctly. Ho hum.
+    // TODO: This probably doesn't handle declarative config (yaml) correctly. Ho hum.
     return new State.EffectiveConfig() {
       @Override
       public opamp.proto.EffectiveConfig get() {
@@ -196,7 +195,6 @@ public class OpampActivator implements AgentListener {
     };
   }
 
-
   @NotNull
   private static ByteString buildConfigBodyFromConfigProps(ConfigProperties config) {
     StringBuilder sb = new StringBuilder();
@@ -206,5 +204,4 @@ public class OpampActivator implements AgentListener {
     // TODO: Additional configs that are useful can be included here...
     return new ByteString(sb.toString().getBytes(UTF_8));
   }
-
 }
