@@ -16,13 +16,16 @@
 
 package com.splunk.opentelemetry.opamp;
 
+import static com.splunk.opentelemetry.SplunkConfiguration.PROFILER_ENABLED_PROPERTY;
 import static io.opentelemetry.opamp.client.internal.request.service.HttpRequestService.DEFAULT_DELAY_BETWEEN_REQUESTS;
 import static io.opentelemetry.opamp.client.internal.request.service.HttpRequestService.DEFAULT_DELAY_BETWEEN_RETRIES;
 import static io.opentelemetry.sdk.autoconfigure.AutoConfigureUtil.getConfig;
 import static io.opentelemetry.sdk.autoconfigure.AutoConfigureUtil.getResource;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.logging.Level.WARNING;
 
 import com.google.auto.service.AutoService;
+import com.splunk.opentelemetry.SplunkConfiguration;
 import io.opentelemetry.javaagent.extension.AgentListener;
 import io.opentelemetry.opamp.client.OpampClient;
 import io.opentelemetry.opamp.client.OpampClientBuilder;
@@ -30,14 +33,20 @@ import io.opentelemetry.opamp.client.internal.connectivity.http.OkHttpSender;
 import io.opentelemetry.opamp.client.internal.request.delay.PeriodicDelay;
 import io.opentelemetry.opamp.client.internal.request.service.HttpRequestService;
 import io.opentelemetry.opamp.client.internal.response.MessageData;
+import io.opentelemetry.opamp.client.internal.state.State;
 import io.opentelemetry.sdk.autoconfigure.AutoConfiguredOpenTelemetrySdk;
 import io.opentelemetry.sdk.autoconfigure.spi.ConfigProperties;
 import io.opentelemetry.sdk.resources.Resource;
-import java.io.IOException;
 import java.time.Duration;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.Logger;
+import okio.ByteString;
+import opamp.proto.AgentConfigFile;
+import opamp.proto.AgentConfigMap;
 import opamp.proto.ServerErrorResponse;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 @AutoService(AgentListener.class)
@@ -61,50 +70,40 @@ public class OpampActivator implements AgentListener {
             OP_AMP_POLLING_INTERVAL, DEFAULT_DELAY_BETWEEN_REQUESTS.getNextDelay().toMillis());
 
     String endpoint = config.getString(OP_AMP_ENDPOINT);
-    OpampClient client =
-        startOpampClient(
-            endpoint,
-            resource,
-            pollingDuration,
-            new OpampClient.Callbacks() {
-              @Override
-              public void onConnect(OpampClient opampClient) {}
+    startOpampClient(
+        config,
+        endpoint,
+        resource,
+        pollingDuration,
+        new OpampClient.Callbacks() {
+          @Override
+          public void onConnect(OpampClient opampClient) {}
 
-              @Override
-              public void onConnectFailed(OpampClient opampClient, @Nullable Throwable throwable) {
-                logger.log(WARNING, "Connection to OpAMP server failed", throwable);
-              }
+          @Override
+          public void onConnectFailed(OpampClient opampClient, @Nullable Throwable throwable) {
+            logger.log(WARNING, "Connection to OpAMP server failed", throwable);
+          }
 
-              @Override
-              public void onErrorResponse(
-                  OpampClient opampClient, ServerErrorResponse serverErrorResponse) {
-                logger.log(WARNING, "OpAMP server returned error " + serverErrorResponse);
-              }
+          @Override
+          public void onErrorResponse(
+              OpampClient opampClient, ServerErrorResponse serverErrorResponse) {
+            logger.log(WARNING, "OpAMP server returned error " + serverErrorResponse);
+          }
 
-              @Override
-              public void onMessage(OpampClient opampClient, MessageData messageData) {}
-            });
-    Runtime.getRuntime()
-        .addShutdownHook(
-            new Thread(
-                () -> {
-                  try {
-                    client.close();
-                  } catch (IOException e) {
-                    logger.log(WARNING, "Error shutting down OpAMP client", e);
-                  }
-                }));
+          @Override
+          public void onMessage(OpampClient opampClient, MessageData messageData) {}
+        });
   }
 
   static OpampClient startOpampClient(
+      ConfigProperties config,
       String endpoint,
       Resource resource,
       long pollingDurationMillis,
       OpampClient.Callbacks callbacks) {
 
     OpampClientBuilder builder = OpampClient.builder();
-    // TODO: Uncomment once we are able to report our effective config
-    // builder.enableEffectiveConfigReporting();
+    builder.enableEffectiveConfigReporting();
     if (endpoint != null) {
       PeriodicDelay pollingDelay =
           PeriodicDelay.ofFixedDuration(Duration.ofMillis(pollingDurationMillis));
@@ -115,6 +114,8 @@ public class OpampActivator implements AgentListener {
     }
     addIdentifyingAttributes(builder, resource);
 
+    State.EffectiveConfig effectiveConfig = buildEffectiveConfig(config);
+    builder.setEffectiveConfigState(effectiveConfig);
     return builder.build(callbacks);
   }
 
@@ -178,4 +179,32 @@ public class OpampActivator implements AgentListener {
               }
             });
   }
+
+
+  private static State.EffectiveConfig buildEffectiveConfig(ConfigProperties config) {
+    //TODO: This probably doesn't handle declarative config (yaml) correctly. Ho hum.
+    return new State.EffectiveConfig() {
+      @Override
+      public opamp.proto.EffectiveConfig get() {
+        Map<String, AgentConfigFile> configItems = new HashMap<>();
+        ByteString body = buildConfigBodyFromConfigProps(config);
+        AgentConfigFile file = new AgentConfigFile(body, "text/plain+properties?");
+        configItems.put("config", file);
+        AgentConfigMap configMap = new AgentConfigMap(configItems);
+        return new opamp.proto.EffectiveConfig(configMap);
+      }
+    };
+  }
+
+
+  @NotNull
+  private static ByteString buildConfigBodyFromConfigProps(ConfigProperties config) {
+    StringBuilder sb = new StringBuilder();
+    sb.append(PROFILER_ENABLED_PROPERTY.toUpperCase().replace('.', '_'))
+        .append("=")
+        .append(SplunkConfiguration.isProfilerEnabled(config));
+    // TODO: Additional configs that are useful can be included here...
+    return new ByteString(sb.toString().getBytes(UTF_8));
+  }
+
 }
