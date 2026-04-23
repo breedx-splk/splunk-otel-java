@@ -20,14 +20,10 @@ import static io.opentelemetry.api.common.AttributeKey.booleanKey;
 import static io.opentelemetry.api.common.AttributeKey.doubleKey;
 import static io.opentelemetry.api.common.AttributeKey.longKey;
 import static io.opentelemetry.api.common.AttributeKey.valueKey;
+import static io.opentelemetry.opamp.client.internal.request.service.HttpRequestService.DEFAULT_DELAY_BETWEEN_RETRIES;
+import static io.opentelemetry.semconv.ServiceAttributes.SERVICE_INSTANCE_ID;
 import static io.opentelemetry.semconv.ServiceAttributes.SERVICE_NAME;
 import static io.opentelemetry.semconv.ServiceAttributes.SERVICE_NAMESPACE;
-import static io.opentelemetry.semconv.ServiceAttributes.SERVICE_INSTANCE_ID;
-import static io.opentelemetry.semconv.ServiceAttributes.SERVICE_VERSION;
-import static io.opentelemetry.semconv.incubating.DeploymentIncubatingAttributes.DEPLOYMENT_ENVIRONMENT_NAME;
-import static io.opentelemetry.semconv.incubating.OsIncubatingAttributes.OS_NAME;
-import static io.opentelemetry.semconv.incubating.OsIncubatingAttributes.OS_TYPE;
-import static io.opentelemetry.semconv.incubating.OsIncubatingAttributes.OS_VERSION;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import io.opentelemetry.api.common.AttributeKey;
@@ -35,9 +31,11 @@ import io.opentelemetry.api.common.Attributes;
 import io.opentelemetry.api.common.Value;
 import io.opentelemetry.instrumentation.testing.internal.AutoCleanupExtension;
 import io.opentelemetry.opamp.client.OpampClient;
+import io.opentelemetry.opamp.client.OpampClientBuilder;
+import io.opentelemetry.opamp.client.internal.connectivity.http.OkHttpSender;
+import io.opentelemetry.opamp.client.internal.request.delay.PeriodicDelay;
+import io.opentelemetry.opamp.client.internal.request.service.HttpRequestService;
 import io.opentelemetry.opamp.client.internal.response.MessageData;
-import io.opentelemetry.sdk.autoconfigure.spi.ConfigProperties;
-import io.opentelemetry.sdk.autoconfigure.spi.internal.DefaultConfigProperties;
 import io.opentelemetry.sdk.resources.Resource;
 import io.opentelemetry.testing.internal.armeria.common.HttpResponse;
 import io.opentelemetry.testing.internal.armeria.common.HttpStatus;
@@ -46,16 +44,8 @@ import io.opentelemetry.testing.internal.armeria.testing.junit5.server.mock.Mock
 import io.opentelemetry.testing.internal.armeria.testing.junit5.server.mock.RecordedRequest;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
-import okio.ByteString;
-import opamp.proto.AgentConfigFile;
-import opamp.proto.AgentConfigMap;
-import opamp.proto.AgentRemoteConfig;
 import opamp.proto.AgentToServer;
 import opamp.proto.AnyValue;
 import opamp.proto.ArrayValue;
@@ -69,7 +59,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-class OpampActivatorTest {
+class OpampAgentAttributesTest {
   private static final MockWebServerExtension server = new MockWebServerExtension();
 
   @RegisterExtension static final AutoCleanupExtension cleanup = AutoCleanupExtension.create();
@@ -90,22 +80,18 @@ class OpampActivatorTest {
   }
 
   @Test
-  void testOpamp() throws Exception {
-    // given
+  void addsIdentifyingAndNonIdentifyingAttributesWithExpectedTypes() throws Exception {
     Attributes attributes =
         Attributes.of(
-                DEPLOYMENT_ENVIRONMENT_NAME,
-                "test-deployment-env",
                 SERVICE_NAME,
                 "test-service",
+                SERVICE_NAMESPACE,
+                "test-namespace",
                 SERVICE_INSTANCE_ID,
                 "test-instance",
-                SERVICE_NAMESPACE,
-                "test-ns")
+                io.opentelemetry.semconv.ServiceAttributes.SERVICE_VERSION,
+                "test-version")
             .toBuilder()
-            .put(OS_NAME, "test-os-name")
-            .put(OS_TYPE, "test-os-type")
-            .put(OS_VERSION, "test-os-ver")
             .put(longKey("long"), 12L)
             .put(doubleKey("double"), 99.0)
             .put(booleanKey("bool"), true)
@@ -119,79 +105,50 @@ class OpampActivatorTest {
             .put("boolarr", new boolean[] {true, false})
             .put(AttributeKey.booleanArrayKey("boolobjarr"), Arrays.asList(true, true, false, true))
             .build();
-    Resource resource = Resource.create(attributes);
-    Map<String, AgentConfigFile> configMap =
-        Collections.singletonMap(
-            "test-key",
-            new AgentConfigFile.Builder().body(ByteString.encodeUtf8("test-value")).build());
-    ServerToAgent response =
-        new ServerToAgent.Builder()
-            .remote_config(
-                new AgentRemoteConfig.Builder()
-                    .config(new AgentConfigMap.Builder().config_map(configMap).build())
-                    .build())
-            .build();
-    server.enqueue(HttpResponse.of(HttpStatus.OK, MediaType.X_PROTOBUF, response.encode()));
 
-    Map<String, String> cm = new HashMap<>();
-    ConfigProperties config = DefaultConfigProperties.createFromMap(cm);
+    enqueueEmptyResponse();
 
-    CompletableFuture<MessageData> result = new CompletableFuture<>();
-    OpampClient client =
-        OpampActivator.startOpampClient(
-            config,
-            server.httpUri().toString(),
-            resource,
-            500,
-            new OpampClient.Callbacks() {
-              @Override
-              public void onConnect(OpampClient opampClient) {}
+    OpampClientBuilder builder = OpampClient.builder();
+    builder.setRequestService(
+        HttpRequestService.create(
+            OkHttpSender.create(server.httpUri().toString()),
+            PeriodicDelay.ofFixedDuration(java.time.Duration.ofMillis(500)),
+            DEFAULT_DELAY_BETWEEN_RETRIES));
+    OpampAgentAttributes agentAttributes = new OpampAgentAttributes(Resource.create(attributes));
+    agentAttributes.addIdentifyingAttributes(builder);
+    agentAttributes.addNonIdentifyingAttributes(builder);
 
-              @Override
-              public void onConnectFailed(OpampClient opampClient, @Nullable Throwable throwable) {
-                result.completeExceptionally(throwable);
-              }
-
-              @Override
-              public void onErrorResponse(
-                  OpampClient opampClient, ServerErrorResponse serverErrorResponse) {
-                result.completeExceptionally(
-                    new IllegalStateException(serverErrorResponse.toString()));
-              }
-
-              @Override
-              public void onMessage(OpampClient opampClient, MessageData messageData) {
-                result.complete(messageData);
-              }
-            });
+    OpampClient client = builder.build(new NoopCallbacks());
     cleanup.deferCleanup(client);
 
-    // when
-    MessageData message = result.get(5, TimeUnit.SECONDS);
-    AgentRemoteConfig remoteConfig = message.getRemoteConfig();
-
-    // then
-    assertThat(remoteConfig).isNotNull();
-    assertThat(remoteConfig.config.config_map.get("test-key").body.utf8()).isEqualTo("test-value");
-
     RecordedRequest recordedRequest = server.takeRequest();
-    byte[] body = recordedRequest.request().content().array();
-    AgentToServer agentToServer = AgentToServer.ADAPTER.decode(body);
-
-    assertIdentifyingString(agentToServer, SERVICE_NAME, "test-service");
-    assertIdentifyingString(agentToServer, SERVICE_INSTANCE_ID, "test-instance");
-    assertIdentifyingString(agentToServer, SERVICE_NAMESPACE, "test-ns");
+    AgentToServer agentToServer =
+        AgentToServer.ADAPTER.decode(recordedRequest.request().content().array());
 
     List<KeyValue> identifyingAttributes = agentToServer.agent_description.identifying_attributes;
     assertThat(identifyingAttributes).hasSize(3);
-
+    assertThat(identifyingAttributes)
+        .anyMatch(
+            kv ->
+                kv.key.equals(SERVICE_NAME.getKey())
+                    && kv.value.string_value.equals("test-service"));
+    assertThat(identifyingAttributes)
+        .anyMatch(
+            kv ->
+                kv.key.equals(SERVICE_NAMESPACE.getKey())
+                    && kv.value.string_value.equals("test-namespace"));
+    assertThat(identifyingAttributes)
+        .anyMatch(
+            kv ->
+                kv.key.equals(SERVICE_INSTANCE_ID.getKey())
+                    && kv.value.string_value.equals("test-instance"));
     List<KeyValue> nonIdentifyingAttributes =
         agentToServer.agent_description.non_identifying_attributes;
     assertThat(nonIdentifyingAttributes)
         .anyMatch(
             kv ->
-                kv.key.equals(DEPLOYMENT_ENVIRONMENT_NAME.getKey())
-                    && kv.value.string_value.equals("test-deployment-env"));
+                kv.key.equals(io.opentelemetry.semconv.ServiceAttributes.SERVICE_VERSION.getKey())
+                    && kv.value.string_value.equals("test-version"));
     assertThat(nonIdentifyingAttributes)
         .anyMatch(kv -> kv.key.equals("long") && kv.value.int_value.equals(12L));
     assertThat(nonIdentifyingAttributes)
@@ -200,6 +157,7 @@ class OpampActivatorTest {
         .anyMatch(kv -> kv.key.equals("bool") && kv.value.bool_value.equals(true));
     assertThat(nonIdentifyingAttributes)
         .anyMatch(kv -> kv.key.equals("val") && kv.value.string_value.equals("vvv"));
+
     AnyValue longsArray =
         createArrayAttribute(
             new AnyValue.Builder().int_value(2L).build(),
@@ -221,7 +179,6 @@ class OpampActivatorTest {
                 "doubleobjarr",
                 new AnyValue.Builder().double_value(5.0).build(),
                 new AnyValue.Builder().double_value(6.0).build()));
-
     assertThat(nonIdentifyingAttributes)
         .anyMatch(
             matching(
@@ -248,15 +205,12 @@ class OpampActivatorTest {
                 new AnyValue.Builder().bool_value(true).build(),
                 new AnyValue.Builder().bool_value(false).build(),
                 new AnyValue.Builder().bool_value(true).build()));
-    assertThat(nonIdentifyingAttributes)
-        .anyMatch(
-            kv -> kv.key.equals(OS_NAME.getKey()) && kv.value.string_value.equals("test-os-name"));
-    assertThat(nonIdentifyingAttributes)
-        .anyMatch(
-            kv -> kv.key.equals(OS_TYPE.getKey()) && kv.value.string_value.equals("test-os-type"));
-    assertThat(nonIdentifyingAttributes)
-        .anyMatch(
-            kv -> kv.key.equals(OS_VERSION.getKey()) && kv.value.string_value.equals("test-os-ver"));
+  }
+
+  private static void enqueueEmptyResponse() {
+    server.enqueue(
+        HttpResponse.of(
+            HttpStatus.OK, MediaType.X_PROTOBUF, new ServerToAgent.Builder().build().encode()));
   }
 
   private static Predicate<? super KeyValue> matching(String key, AnyValue... values) {
@@ -269,9 +223,18 @@ class OpampActivatorTest {
         .build();
   }
 
-  private void assertIdentifyingString(
-      AgentToServer agentToServer, AttributeKey<String> attr, String expected) {
-    assertThat(agentToServer.agent_description.identifying_attributes)
-        .anyMatch(kv -> kv.key.equals(attr.getKey()) && kv.value.string_value.equals(expected));
+  private static class NoopCallbacks implements OpampClient.Callbacks {
+    @Override
+    public void onConnect(OpampClient opampClient) {}
+
+    @Override
+    public void onConnectFailed(OpampClient opampClient, @Nullable Throwable throwable) {}
+
+    @Override
+    public void onErrorResponse(
+        OpampClient opampClient, ServerErrorResponse serverErrorResponse) {}
+
+    @Override
+    public void onMessage(OpampClient opampClient, MessageData messageData) {}
   }
 }
