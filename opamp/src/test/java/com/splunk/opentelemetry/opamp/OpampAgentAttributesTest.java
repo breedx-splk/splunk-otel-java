@@ -37,44 +37,53 @@ import org.junit.jupiter.api.Test;
 
 class OpampAgentAttributesTest {
 
+  private static final Attributes resourceAttributes =
+      Attributes.of(
+              SERVICE_NAME,
+              "test-service",
+              SERVICE_NAMESPACE,
+              "test-namespace",
+              SERVICE_INSTANCE_ID,
+              "test-instance",
+              SERVICE_VERSION,
+              "test-version")
+          .toBuilder()
+          .put(longKey("long"), 12L)
+          .put(doubleKey("double"), 99.0)
+          .put(booleanKey("bool"), true)
+          .put(valueKey("val"), Value.of("vvv"))
+          .put("longarr", new long[] {2L, 3L, 5L})
+          .put(AttributeKey.longArrayKey("longobjarr"), Arrays.asList(2L, 3L, 5L))
+          .put("doublearr", new double[] {2.0, 3.0})
+          .put(AttributeKey.doubleArrayKey("doubleobjarr"), Arrays.asList(5.0, 6.0))
+          .put("stringarr", new String[] {"foo", "flimflam"})
+          .put(AttributeKey.stringArrayKey("stringobjarr"), Arrays.asList("flim", "jibberjo"))
+          .put("boolarr", new boolean[] {true, false})
+          .put(AttributeKey.booleanArrayKey("boolobjarr"), Arrays.asList(true, true, false, true))
+          .build();
+  private static final Resource resource = Resource.create(resourceAttributes);
+
   @Test
-  void addsIdentifyingAndNonIdentifyingAttributes() {
-    Attributes attributes =
-        Attributes.of(
-                SERVICE_NAME,
-                "test-service",
-                SERVICE_NAMESPACE,
-                "test-namespace",
-                SERVICE_INSTANCE_ID,
-                "test-instance",
-                SERVICE_VERSION,
-                "test-version")
-            .toBuilder()
-            .put(longKey("long"), 12L)
-            .put(doubleKey("double"), 99.0)
-            .put(booleanKey("bool"), true)
-            .put(valueKey("val"), Value.of("vvv"))
-            .put("longarr", new long[] {2L, 3L, 5L})
-            .put(AttributeKey.longArrayKey("longobjarr"), Arrays.asList(2L, 3L, 5L))
-            .put("doublearr", new double[] {2.0, 3.0})
-            .put(AttributeKey.doubleArrayKey("doubleobjarr"), Arrays.asList(5.0, 6.0))
-            .put("stringarr", new String[] {"foo", "flimflam"})
-            .put(AttributeKey.stringArrayKey("stringobjarr"), Arrays.asList("flim", "jibberjo"))
-            .put("boolarr", new boolean[] {true, false})
-            .put(AttributeKey.booleanArrayKey("boolobjarr"), Arrays.asList(true, true, false, true))
-            .build();
+  void addsIdentifyingAttributes() {
+    IdentifyingFakeAttributeConsumer consumer = new IdentifyingFakeAttributeConsumer();
 
-    FakeAttributeConsumer consumer = new FakeAttributeConsumer();
-    OpampAgentAttributes agentAttributes = new OpampAgentAttributes(Resource.create(attributes));
-
-    agentAttributes.addIdentifyingAttributes(consumer);
-    agentAttributes.addNonIdentifyingAttributes(consumer);
+    OpampAgentAttributes testClass = new OpampAgentAttributes(resource);
+    testClass.addIdentifyingAttributes(consumer);
 
     assertThat(consumer.identifying).hasSize(3);
     assertThat(consumer.identifying)
         .containsEntry(SERVICE_NAME.getKey(), "test-service")
         .containsEntry(SERVICE_NAMESPACE.getKey(), "test-namespace")
         .containsEntry(SERVICE_INSTANCE_ID.getKey(), "test-instance");
+  }
+
+  @Test
+  void addsNonIdentifyingAttributes() {
+    NonIdentifyingFakeAttributeConsumer consumer = new NonIdentifyingFakeAttributeConsumer();
+
+    OpampAgentAttributes testClass = new OpampAgentAttributes(resource);
+
+    testClass.addNonIdentifyingAttributes(consumer);
 
     assertThat(consumer.nonIdentifying)
         .containsEntry(SERVICE_VERSION.getKey(), "test-version")
@@ -95,9 +104,9 @@ class OpampAgentAttributesTest {
         .containsExactly(true, true, false, true);
   }
 
-  static class FakeAttributeConsumer implements OpampAgentAttributes.AttributeConsumer {
+  static class IdentifyingFakeAttributeConsumer
+      implements OpampAgentAttributes.IdentifyingAttributeConsumer {
     final Map<String, Object> identifying = new LinkedHashMap<>();
-    final Map<String, Object> nonIdentifying = new LinkedHashMap<>();
 
     @Override
     public void putIdentifying(String key, String value) {
@@ -138,6 +147,11 @@ class OpampAgentAttributesTest {
     public void putIdentifying(String key, boolean[] value) {
       identifying.put(key, value);
     }
+  }
+
+  static class NonIdentifyingFakeAttributeConsumer
+      implements OpampAgentAttributes.NonIdentifyingAttributeConsumer {
+    final Map<String, Object> nonIdentifying = new LinkedHashMap<>();
 
     @Override
     public void putNonIdentifying(String key, String value) {

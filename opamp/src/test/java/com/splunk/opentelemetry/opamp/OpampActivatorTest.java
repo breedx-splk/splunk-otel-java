@@ -20,10 +20,9 @@ import static io.opentelemetry.api.common.AttributeKey.booleanKey;
 import static io.opentelemetry.api.common.AttributeKey.doubleKey;
 import static io.opentelemetry.api.common.AttributeKey.longKey;
 import static io.opentelemetry.api.common.AttributeKey.valueKey;
+import static io.opentelemetry.semconv.ServiceAttributes.SERVICE_INSTANCE_ID;
 import static io.opentelemetry.semconv.ServiceAttributes.SERVICE_NAME;
 import static io.opentelemetry.semconv.ServiceAttributes.SERVICE_NAMESPACE;
-import static io.opentelemetry.semconv.ServiceAttributes.SERVICE_INSTANCE_ID;
-import static io.opentelemetry.semconv.ServiceAttributes.SERVICE_VERSION;
 import static io.opentelemetry.semconv.incubating.DeploymentIncubatingAttributes.DEPLOYMENT_ENVIRONMENT_NAME;
 import static io.opentelemetry.semconv.incubating.OsIncubatingAttributes.OS_NAME;
 import static io.opentelemetry.semconv.incubating.OsIncubatingAttributes.OS_TYPE;
@@ -256,7 +255,8 @@ class OpampActivatorTest {
             kv -> kv.key.equals(OS_TYPE.getKey()) && kv.value.string_value.equals("test-os-type"));
     assertThat(nonIdentifyingAttributes)
         .anyMatch(
-            kv -> kv.key.equals(OS_VERSION.getKey()) && kv.value.string_value.equals("test-os-ver"));
+            kv ->
+                kv.key.equals(OS_VERSION.getKey()) && kv.value.string_value.equals("test-os-ver"));
   }
 
   private static Predicate<? super KeyValue> matching(String key, AnyValue... values) {
