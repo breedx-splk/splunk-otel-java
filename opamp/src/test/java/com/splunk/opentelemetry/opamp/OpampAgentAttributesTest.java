@@ -24,15 +24,16 @@ import static io.opentelemetry.semconv.ServiceAttributes.SERVICE_INSTANCE_ID;
 import static io.opentelemetry.semconv.ServiceAttributes.SERVICE_NAME;
 import static io.opentelemetry.semconv.ServiceAttributes.SERVICE_NAMESPACE;
 import static io.opentelemetry.semconv.ServiceAttributes.SERVICE_VERSION;
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.api.common.Attributes;
 import io.opentelemetry.api.common.Value;
+import io.opentelemetry.opamp.client.OpampClientBuilder;
 import io.opentelemetry.sdk.resources.Resource;
 import java.util.Arrays;
-import java.util.LinkedHashMap;
-import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 class OpampAgentAttributesTest {
@@ -65,132 +66,39 @@ class OpampAgentAttributesTest {
 
   @Test
   void addsIdentifyingAttributes() {
-    IdentifyingFakeAttributeConsumer consumer = new IdentifyingFakeAttributeConsumer();
+    OpampClientBuilder builder = mock(OpampClientBuilder.class);
 
     OpampAgentAttributes testClass = new OpampAgentAttributes(resource);
-    testClass.addIdentifyingAttributes(consumer);
+    testClass.addIdentifyingAttributes(builder);
 
-    assertThat(consumer.identifying).hasSize(3);
-    assertThat(consumer.identifying)
-        .containsEntry(SERVICE_NAME.getKey(), "test-service")
-        .containsEntry(SERVICE_NAMESPACE.getKey(), "test-namespace")
-        .containsEntry(SERVICE_INSTANCE_ID.getKey(), "test-instance");
+    verify(builder).putIdentifyingAttribute(SERVICE_NAME.getKey(), "test-service");
+    verify(builder).putIdentifyingAttribute(SERVICE_NAMESPACE.getKey(), "test-namespace");
+    verify(builder).putIdentifyingAttribute(SERVICE_INSTANCE_ID.getKey(), "test-instance");
+    verifyNoMoreInteractions(builder);
   }
 
   @Test
   void addsNonIdentifyingAttributes() {
-    NonIdentifyingFakeAttributeConsumer consumer = new NonIdentifyingFakeAttributeConsumer();
+    OpampClientBuilder builder = mock();
 
     OpampAgentAttributes testClass = new OpampAgentAttributes(resource);
 
-    testClass.addNonIdentifyingAttributes(consumer);
+    testClass.addNonIdentifyingAttributes(builder);
 
-    assertThat(consumer.nonIdentifying)
-        .containsEntry(SERVICE_VERSION.getKey(), "test-version")
-        .containsEntry("long", 12L)
-        .containsEntry("double", 99.0)
-        .containsEntry("bool", true)
-        .containsEntry("val", "vvv");
-    assertThat((long[]) consumer.nonIdentifying.get("longarr")).containsExactly(2L, 3L, 5L);
-    assertThat((long[]) consumer.nonIdentifying.get("longobjarr")).containsExactly(2L, 3L, 5L);
-    assertThat((double[]) consumer.nonIdentifying.get("doublearr")).containsExactly(2.0, 3.0);
-    assertThat((double[]) consumer.nonIdentifying.get("doubleobjarr")).containsExactly(5.0, 6.0);
-    assertThat((String[]) consumer.nonIdentifying.get("stringarr"))
-        .containsExactly("foo", "flimflam");
-    assertThat((String[]) consumer.nonIdentifying.get("stringobjarr"))
-        .containsExactly("flim", "jibberjo");
-    assertThat((boolean[]) consumer.nonIdentifying.get("boolarr")).containsExactly(true, false);
-    assertThat((boolean[]) consumer.nonIdentifying.get("boolobjarr"))
-        .containsExactly(true, true, false, true);
-  }
+    verify(builder).putNonIdentifyingAttribute(SERVICE_VERSION.getKey(), "test-version");
+    verify(builder).putNonIdentifyingAttribute("long", 12L);
+    verify(builder).putNonIdentifyingAttribute("double", 99.0);
+    verify(builder).putNonIdentifyingAttribute("bool", true);
+    verify(builder).putNonIdentifyingAttribute("val", "vvv");
 
-  static class IdentifyingFakeAttributeConsumer
-      implements OpampAgentAttributes.IdentifyingAttributeConsumer {
-    final Map<String, Object> identifying = new LinkedHashMap<>();
-
-    @Override
-    public void putIdentifying(String key, String value) {
-      identifying.put(key, value);
-    }
-
-    @Override
-    public void putIdentifying(String key, long value) {
-      identifying.put(key, value);
-    }
-
-    @Override
-    public void putIdentifying(String key, double value) {
-      identifying.put(key, value);
-    }
-
-    @Override
-    public void putIdentifying(String key, boolean value) {
-      identifying.put(key, value);
-    }
-
-    @Override
-    public void putIdentifying(String key, String[] value) {
-      identifying.put(key, value);
-    }
-
-    @Override
-    public void putIdentifying(String key, long[] value) {
-      identifying.put(key, value);
-    }
-
-    @Override
-    public void putIdentifying(String key, double[] value) {
-      identifying.put(key, value);
-    }
-
-    @Override
-    public void putIdentifying(String key, boolean[] value) {
-      identifying.put(key, value);
-    }
-  }
-
-  static class NonIdentifyingFakeAttributeConsumer
-      implements OpampAgentAttributes.NonIdentifyingAttributeConsumer {
-    final Map<String, Object> nonIdentifying = new LinkedHashMap<>();
-
-    @Override
-    public void putNonIdentifying(String key, String value) {
-      nonIdentifying.put(key, value);
-    }
-
-    @Override
-    public void putNonIdentifying(String key, long value) {
-      nonIdentifying.put(key, value);
-    }
-
-    @Override
-    public void putNonIdentifying(String key, double value) {
-      nonIdentifying.put(key, value);
-    }
-
-    @Override
-    public void putNonIdentifying(String key, boolean value) {
-      nonIdentifying.put(key, value);
-    }
-
-    @Override
-    public void putNonIdentifying(String key, String[] value) {
-      nonIdentifying.put(key, value);
-    }
-
-    @Override
-    public void putNonIdentifying(String key, long[] value) {
-      nonIdentifying.put(key, value);
-    }
-
-    @Override
-    public void putNonIdentifying(String key, double[] value) {
-      nonIdentifying.put(key, value);
-    }
-
-    @Override
-    public void putNonIdentifying(String key, boolean[] value) {
-      nonIdentifying.put(key, value);
-    }
+    verify(builder).putNonIdentifyingAttribute("longarr", 2L, 3L, 5L);
+    verify(builder).putNonIdentifyingAttribute("longobjarr", 2L, 3L, 5L);
+    verify(builder).putNonIdentifyingAttribute("doublearr", 2.0, 3.0);
+    verify(builder).putNonIdentifyingAttribute("doubleobjarr", 5.0, 6.0);
+    verify(builder).putNonIdentifyingAttribute("stringarr", "foo", "flimflam");
+    verify(builder).putNonIdentifyingAttribute("stringobjarr", "flim", "jibberjo");
+    verify(builder).putNonIdentifyingAttribute("boolarr", true, false);
+    verify(builder).putNonIdentifyingAttribute("boolobjarr", true, true, false, true);
+    verifyNoMoreInteractions(builder);
   }
 }

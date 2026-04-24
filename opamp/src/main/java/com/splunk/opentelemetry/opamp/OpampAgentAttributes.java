@@ -18,6 +18,7 @@ package com.splunk.opentelemetry.opamp;
 
 import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.api.common.AttributeType;
+import io.opentelemetry.opamp.client.OpampClientBuilder;
 import io.opentelemetry.sdk.resources.Resource;
 import java.util.Arrays;
 import java.util.List;
@@ -34,20 +35,20 @@ class OpampAgentAttributes {
     this.resource = resource;
   }
 
-  void addIdentifyingAttributes(IdentifyingAttributeConsumer consumer) {
+  void addIdentifyingAttributes(OpampClientBuilder builder) {
     resource.getAttributes().asMap().entrySet().stream()
         .filter(entry -> IDENTIFYING_ATTRIBUTES.contains(entry.getKey().getKey()))
-        .forEach(putIdentifyingAttribute(consumer));
+        .forEach(putIdentifyingAttribute(builder));
   }
 
-  void addNonIdentifyingAttributes(NonIdentifyingAttributeConsumer consumer) {
+  void addNonIdentifyingAttributes(OpampClientBuilder builder) {
     resource.getAttributes().asMap().entrySet().stream()
         .filter(entry -> !IDENTIFYING_ATTRIBUTES.contains(entry.getKey().getKey()))
-        .forEach(putNonIdentifyingAttribute(consumer));
+        .forEach(putNonIdentifyingAttribute(builder));
   }
 
   private Consumer<? super Map.Entry<AttributeKey<?>, Object>> putIdentifyingAttribute(
-      IdentifyingAttributeConsumer consumer) {
+      OpampClientBuilder builder) {
     return entry -> {
       AttributeKey<?> key = entry.getKey();
       Object value = entry.getValue();
@@ -57,35 +58,35 @@ class OpampAgentAttributes {
       switch (type) {
         case STRING:
         case VALUE:
-          consumer.putIdentifying(key.getKey(), (String) makeValue(type, value));
+          builder.putIdentifyingAttribute(key.getKey(), (String) makeValue(type, value));
           break;
         case LONG:
-          consumer.putIdentifying(key.getKey(), (long) makeValue(type, value));
+          builder.putIdentifyingAttribute(key.getKey(), (long) makeValue(type, value));
           break;
         case DOUBLE:
-          consumer.putIdentifying(key.getKey(), (double) makeValue(type, value));
+          builder.putIdentifyingAttribute(key.getKey(), (double) makeValue(type, value));
           break;
         case BOOLEAN:
-          consumer.putIdentifying(key.getKey(), (boolean) makeValue(type, value));
+          builder.putIdentifyingAttribute(key.getKey(), (boolean) makeValue(type, value));
           break;
         case STRING_ARRAY:
-          consumer.putIdentifying(key.getKey(), (String[]) makeValue(type, value));
+          builder.putIdentifyingAttribute(key.getKey(), (String[]) makeValue(type, value));
           break;
         case LONG_ARRAY:
-          consumer.putIdentifying(key.getKey(), (long[]) makeValue(type, value));
+          builder.putIdentifyingAttribute(key.getKey(), (long[]) makeValue(type, value));
           break;
         case DOUBLE_ARRAY:
-          consumer.putIdentifying(key.getKey(), (double[]) makeValue(type, value));
+          builder.putIdentifyingAttribute(key.getKey(), (double[]) makeValue(type, value));
           break;
         case BOOLEAN_ARRAY:
-          consumer.putIdentifying(key.getKey(), (boolean[]) makeValue(type, value));
+          builder.putIdentifyingAttribute(key.getKey(), (boolean[]) makeValue(type, value));
           break;
       }
     };
   }
 
   private Consumer<? super Map.Entry<AttributeKey<?>, Object>> putNonIdentifyingAttribute(
-      NonIdentifyingAttributeConsumer consumer) {
+      OpampClientBuilder builder) {
     return entry -> {
       AttributeKey<?> key = entry.getKey();
       Object value = entry.getValue();
@@ -95,28 +96,28 @@ class OpampAgentAttributes {
       switch (type) {
         case STRING:
         case VALUE:
-          consumer.putNonIdentifying(key.getKey(), (String) makeValue(type, value));
+          builder.putNonIdentifyingAttribute(key.getKey(), (String) makeValue(type, value));
           break;
         case LONG:
-          consumer.putNonIdentifying(key.getKey(), (long) makeValue(type, value));
+          builder.putNonIdentifyingAttribute(key.getKey(), (long) makeValue(type, value));
           break;
         case DOUBLE:
-          consumer.putNonIdentifying(key.getKey(), (double) makeValue(type, value));
+          builder.putNonIdentifyingAttribute(key.getKey(), (double) makeValue(type, value));
           break;
         case BOOLEAN:
-          consumer.putNonIdentifying(key.getKey(), (boolean) makeValue(type, value));
+          builder.putNonIdentifyingAttribute(key.getKey(), (boolean) makeValue(type, value));
           break;
         case STRING_ARRAY:
-          consumer.putNonIdentifying(key.getKey(), (String[]) makeValue(type, value));
+          builder.putNonIdentifyingAttribute(key.getKey(), (String[]) makeValue(type, value));
           break;
         case LONG_ARRAY:
-          consumer.putNonIdentifying(key.getKey(), (long[]) makeValue(type, value));
+          builder.putNonIdentifyingAttribute(key.getKey(), (long[]) makeValue(type, value));
           break;
         case DOUBLE_ARRAY:
-          consumer.putNonIdentifying(key.getKey(), (double[]) makeValue(type, value));
+          builder.putNonIdentifyingAttribute(key.getKey(), (double[]) makeValue(type, value));
           break;
         case BOOLEAN_ARRAY:
-          consumer.putNonIdentifying(key.getKey(), (boolean[]) makeValue(type, value));
+          builder.putNonIdentifyingAttribute(key.getKey(), (boolean[]) makeValue(type, value));
           break;
       }
     };
@@ -159,46 +160,4 @@ class OpampAgentAttributes {
     }
     return null;
   }
-
-  // Exists for testing
-  interface IdentifyingAttributeConsumer {
-    void putIdentifying(String key, String value);
-
-    void putIdentifying(String key, long value);
-
-    void putIdentifying(String key, double value);
-
-    void putIdentifying(String key, boolean value);
-
-    void putIdentifying(String key, String[] value);
-
-    void putIdentifying(String key, long[] value);
-
-    void putIdentifying(String key, double[] value);
-
-    void putIdentifying(String key, boolean[] value);
-  }
-
-  // Exists for testing
-  interface NonIdentifyingAttributeConsumer {
-    void putNonIdentifying(String key, String value);
-
-    void putNonIdentifying(String key, long value);
-
-    void putNonIdentifying(String key, double value);
-
-    void putNonIdentifying(String key, boolean value);
-
-    void putNonIdentifying(String key, String[] value);
-
-    void putNonIdentifying(String key, long[] value);
-
-    void putNonIdentifying(String key, double[] value);
-
-    void putNonIdentifying(String key, boolean[] value);
-  }
-
-  // Exists for testing
-  interface AttributeConsumer
-      extends IdentifyingAttributeConsumer, NonIdentifyingAttributeConsumer {}
 }

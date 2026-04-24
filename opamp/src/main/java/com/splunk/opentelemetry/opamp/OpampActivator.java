@@ -120,9 +120,8 @@ public class OpampActivator implements AgentListener {
       builder.setRequestService(httpSender);
     }
     OpampAgentAttributes agentAttributes = new OpampAgentAttributes(resource);
-    OpampAgentAttributes.AttributeConsumer consumer = new BuilderAttributeConsumer(builder);
-    agentAttributes.addIdentifyingAttributes(consumer);
-    agentAttributes.addNonIdentifyingAttributes(consumer);
+    agentAttributes.addIdentifyingAttributes(builder);
+    agentAttributes.addNonIdentifyingAttributes(builder);
 
     State.EffectiveConfig effectiveConfig = buildEffectiveConfig(config);
     builder.setEffectiveConfigState(effectiveConfig);
@@ -142,93 +141,5 @@ public class OpampActivator implements AgentListener {
         return new opamp.proto.EffectiveConfig(configMap);
       }
     };
-  }
-
-  private static class BuilderAttributeConsumer implements OpampAgentAttributes.AttributeConsumer {
-    private final OpampClientBuilder builder;
-
-    private BuilderAttributeConsumer(OpampClientBuilder builder) {
-      this.builder = builder;
-    }
-
-    @Override
-    public void putIdentifying(String key, String value) {
-      builder.putIdentifyingAttribute(key, value);
-    }
-
-    @Override
-    public void putIdentifying(String key, long value) {
-      builder.putIdentifyingAttribute(key, value);
-    }
-
-    @Override
-    public void putIdentifying(String key, double value) {
-      builder.putIdentifyingAttribute(key, value);
-    }
-
-    @Override
-    public void putIdentifying(String key, boolean value) {
-      builder.putIdentifyingAttribute(key, value);
-    }
-
-    @Override
-    public void putIdentifying(String key, String[] value) {
-      builder.putIdentifyingAttribute(key, value);
-    }
-
-    @Override
-    public void putIdentifying(String key, long[] value) {
-      builder.putIdentifyingAttribute(key, value);
-    }
-
-    @Override
-    public void putIdentifying(String key, double[] value) {
-      builder.putIdentifyingAttribute(key, value);
-    }
-
-    @Override
-    public void putIdentifying(String key, boolean[] value) {
-      builder.putIdentifyingAttribute(key, value);
-    }
-
-    @Override
-    public void putNonIdentifying(String key, String value) {
-      builder.putNonIdentifyingAttribute(key, value);
-    }
-
-    @Override
-    public void putNonIdentifying(String key, long value) {
-      builder.putNonIdentifyingAttribute(key, value);
-    }
-
-    @Override
-    public void putNonIdentifying(String key, double value) {
-      builder.putNonIdentifyingAttribute(key, value);
-    }
-
-    @Override
-    public void putNonIdentifying(String key, boolean value) {
-      builder.putNonIdentifyingAttribute(key, value);
-    }
-
-    @Override
-    public void putNonIdentifying(String key, String[] value) {
-      builder.putNonIdentifyingAttribute(key, value);
-    }
-
-    @Override
-    public void putNonIdentifying(String key, long[] value) {
-      builder.putNonIdentifyingAttribute(key, value);
-    }
-
-    @Override
-    public void putNonIdentifying(String key, double[] value) {
-      builder.putNonIdentifyingAttribute(key, value);
-    }
-
-    @Override
-    public void putNonIdentifying(String key, boolean[] value) {
-      builder.putNonIdentifyingAttribute(key, value);
-    }
   }
 }
