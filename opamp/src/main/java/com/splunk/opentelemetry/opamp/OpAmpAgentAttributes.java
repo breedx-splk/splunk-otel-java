@@ -72,20 +72,14 @@ class OpampAgentAttributes {
           consumer.putIdentifying(key.getKey(), (String[]) makeValue(type, value));
           break;
         case LONG_ARRAY:
-          {
-            consumer.putIdentifying(key.getKey(), (long[]) makeValue(type, value));
-            break;
-          }
+          consumer.putIdentifying(key.getKey(), (long[]) makeValue(type, value));
+          break;
         case DOUBLE_ARRAY:
-          {
-            consumer.putIdentifying(key.getKey(), (double[]) makeValue(type, value));
-            break;
-          }
+          consumer.putIdentifying(key.getKey(), (double[]) makeValue(type, value));
+          break;
         case BOOLEAN_ARRAY:
-          {
-            consumer.putIdentifying(key.getKey(), (boolean[]) makeValue(type, value));
-            break;
-          }
+          consumer.putIdentifying(key.getKey(), (boolean[]) makeValue(type, value));
+          break;
       }
     };
   }
@@ -116,20 +110,14 @@ class OpampAgentAttributes {
           consumer.putNonIdentifying(key.getKey(), (String[]) makeValue(type, value));
           break;
         case LONG_ARRAY:
-          {
-            consumer.putNonIdentifying(key.getKey(), (long[]) makeValue(type, value));
-            break;
-          }
+          consumer.putNonIdentifying(key.getKey(), (long[]) makeValue(type, value));
+          break;
         case DOUBLE_ARRAY:
-          {
-            consumer.putNonIdentifying(key.getKey(), (double[]) makeValue(type, value));
-            break;
-          }
+          consumer.putNonIdentifying(key.getKey(), (double[]) makeValue(type, value));
+          break;
         case BOOLEAN_ARRAY:
-          {
-            consumer.putNonIdentifying(key.getKey(), (boolean[]) makeValue(type, value));
-            break;
-          }
+          consumer.putNonIdentifying(key.getKey(), (boolean[]) makeValue(type, value));
+          break;
       }
     };
   }
@@ -145,37 +133,29 @@ class OpampAgentAttributes {
       case VALUE:
         return value.toString();
       case STRING_ARRAY:
-        {
-          List<String> typedValueList = (List<String>) value;
-          return typedValueList.toArray(new String[] {});
-        }
+        List<String> typedValueList = (List<String>) value;
+        return typedValueList.toArray(new String[] {});
       case LONG_ARRAY:
-        {
-          List<Long> typedValueList = (List<Long>) value;
-          long[] primitiveArray = new long[typedValueList.size()];
-          for (int i = 0; i < typedValueList.size(); i++) {
-            primitiveArray[i] = typedValueList.get(i);
-          }
-          return primitiveArray;
+        List<Long> longList = (List<Long>) value;
+        long[] longArray = new long[longList.size()];
+        for (int i = 0; i < longList.size(); i++) {
+          longArray[i] = longList.get(i);
         }
+        return longArray;
       case DOUBLE_ARRAY:
-        {
-          List<Double> typedValueList = (List<Double>) value;
-          double[] primitiveArray = new double[typedValueList.size()];
-          for (int i = 0; i < typedValueList.size(); i++) {
-            primitiveArray[i] = typedValueList.get(i);
-          }
-          return primitiveArray;
+        List<Double> doubleList = (List<Double>) value;
+        double[] doubleArray = new double[doubleList.size()];
+        for (int i = 0; i < doubleList.size(); i++) {
+          doubleArray[i] = doubleList.get(i);
         }
+        return doubleArray;
       case BOOLEAN_ARRAY:
-        {
-          List<Boolean> typedValueList = (List<Boolean>) value;
-          boolean[] primitiveArray = new boolean[typedValueList.size()];
-          for (int i = 0; i < typedValueList.size(); i++) {
-            primitiveArray[i] = typedValueList.get(i);
-          }
-          return primitiveArray;
+        List<Boolean> booleanList = (List<Boolean>) value;
+        boolean[] booleanArray = new boolean[booleanList.size()];
+        for (int i = 0; i < booleanList.size(); i++) {
+          booleanArray[i] = booleanList.get(i);
         }
+        return booleanArray;
     }
     return null;
   }
