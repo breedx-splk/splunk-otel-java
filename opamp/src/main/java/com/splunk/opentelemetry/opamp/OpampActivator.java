@@ -80,7 +80,13 @@ public class OpampActivator implements AgentListener {
           new PprofLogDataExporter(
               loggerOfCommands, ProfilingDataType.CPU, InstrumentationSource.THREADDUMP);
       PprofThreadDumpExporter threadDumpExporter = new PprofThreadDumpExporter(logDataExporter);
-      commandDispatcher = new CommandDispatcherImpl(new BigDumper(threadDumpExporter::export));
+      io.opentelemetry.api.logs.Logger threadDumpLogger =
+          autoConfiguredOpenTelemetrySdk
+              .getOpenTelemetrySdk()
+              .getSdkLoggerProvider()
+              .get("splunk.thread.dump");
+      BigDumper bigDumper = new BigDumper(threadDumpExporter::export, threadDumpLogger);
+      commandDispatcher = new CommandDispatcherImpl(bigDumper);
     }
     ServerToAgentMessageHandler serverToAgentMessageHandler =
         new ServerToAgentMessageHandler(
