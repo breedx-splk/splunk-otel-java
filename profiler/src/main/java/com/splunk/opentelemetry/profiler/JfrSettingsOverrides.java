@@ -39,6 +39,7 @@ class JfrSettingsOverrides {
     if (!Duration.ZERO.equals(customInterval)) {
       settings.put("jdk.ThreadDump#period", customInterval.toMillis() + " ms");
     }
+    settings.put("jdk.JavaMonitorWait#enabled", Boolean.toString(config.getMonitorLocksEnabled()));
     return maybeEnableTLABs(settings);
   }
 
