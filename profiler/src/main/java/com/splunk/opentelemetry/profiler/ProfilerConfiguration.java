@@ -36,6 +36,7 @@ public class ProfilerConfiguration {
   private final boolean enabled;
   @Nullable private final String ingestUrl;
   @Nullable private final String otlpProtocol;
+  private final boolean monitorLocksEnabled;
   private final boolean memoryEnabled;
   private final boolean memoryEventRateLimitEnabled;
   private final String memoryEventRate;
@@ -54,6 +55,7 @@ public class ProfilerConfiguration {
     enabled = builder.enabled;
     ingestUrl = builder.ingestUrl;
     otlpProtocol = builder.otlpProtocol;
+    monitorLocksEnabled = builder.monitorLocksEnabled;
     memoryEnabled = builder.memoryEnabled;
     memoryEventRateLimitEnabled = builder.memoryEventRateLimitEnabled;
     memoryEventRate = builder.memoryEventRate;
@@ -78,6 +80,7 @@ public class ProfilerConfiguration {
         .setEnabled(enabled)
         .setIngestUrl(ingestUrl)
         .setOtlpProtocol(otlpProtocol)
+        .setMonitorLocksEnabled(monitorLocksEnabled)
         .setMemoryEnabled(memoryEnabled)
         .setMemoryEventRateLimitEnabled(memoryEventRateLimitEnabled)
         .setMemoryEventRate(memoryEventRate)
@@ -106,6 +109,7 @@ public class ProfilerConfiguration {
     log("KeepFiles", getKeepFiles());
     log("OtlpProtocol", getOtlpProtocol());
     log("IngestUrl", getIngestUrl());
+    log("MonitorLocksEnabled", getMonitorLocksEnabled());
     log("MemoryEnabled", getMemoryEnabled());
     if (getMemoryEventRateLimitEnabled()) {
       log("MemoryEventRate", getMemoryEventRate());
@@ -135,6 +139,10 @@ public class ProfilerConfiguration {
 
   public boolean getMemoryEnabled() {
     return memoryEnabled;
+  }
+
+  public boolean getMonitorLocksEnabled() {
+    return monitorLocksEnabled;
   }
 
   public boolean getMemoryEventRateLimitEnabled() {
@@ -196,6 +204,7 @@ public class ProfilerConfiguration {
     }
     ProfilerConfiguration that = (ProfilerConfiguration) other;
     return enabled == that.enabled
+        && monitorLocksEnabled == that.monitorLocksEnabled
         && memoryEnabled == that.memoryEnabled
         && memoryEventRateLimitEnabled == that.memoryEventRateLimitEnabled
         && useAllocationSampleEvent == that.useAllocationSampleEvent
@@ -219,6 +228,7 @@ public class ProfilerConfiguration {
         enabled,
         ingestUrl,
         otlpProtocol,
+        monitorLocksEnabled,
         memoryEnabled,
         memoryEventRateLimitEnabled,
         memoryEventRate,
@@ -246,6 +256,7 @@ public class ProfilerConfiguration {
     private boolean enabled;
     @Nullable private String ingestUrl;
     @Nullable private String otlpProtocol;
+    private boolean monitorLocksEnabled;
     private boolean memoryEnabled;
     private boolean memoryEventRateLimitEnabled = true;
     private String memoryEventRate = "150/s";
@@ -278,6 +289,11 @@ public class ProfilerConfiguration {
 
     public Builder setOtlpProtocol(@Nullable String otlpProtocol) {
       this.otlpProtocol = otlpProtocol;
+      return this;
+    }
+
+    public Builder setMonitorLocksEnabled(boolean monitorLocksEnabled) {
+      this.monitorLocksEnabled = monitorLocksEnabled;
       return this;
     }
 

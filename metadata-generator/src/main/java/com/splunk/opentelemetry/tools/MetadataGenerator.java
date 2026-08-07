@@ -686,6 +686,7 @@ public class MetadataGenerator {
     | `splunk.profiler.keep-files`              | false                         | leave JFR files on disk if `true`                                                                                         |
     | `splunk.profiler.logs-endpoint`           | http://localhost:4318/v1/logs | where to send OTLP logs, defaults to `otel.exporter.otlp.endpoint`                                                        |
     | `splunk.profiler.call.stack.interval`     | 10000ms                       | how often to sample call stacks                                                                                           |
+    | `splunk.profiler.monitorlocks.enabled`    | false                         | set to `true` to export `jdk.JavaMonitorWait` events as OTLP logs                                                        |
     | `splunk.profiler.memory.enabled`          | false                         | set to `true` to enable all other memory profiling options unless explicitly disabled. Setting to `true` enables metrics. |
     | `splunk.profiler.memory.event.rate`       | 150/s                         | allocation event rate                                                                                                     |
     | `splunk.profiler.include.internal.stacks` | false                         | set to `true` to include stack traces of agent internal threads and stack traces with only JDK internal frames            |
@@ -734,6 +735,13 @@ public class MetadataGenerator {
             "How often to sample call stacks.",
             "10000ms",
             SettingType.STRING,
+            SettingCategory.PROFILER));
+    settings.add(
+        setting(
+            "splunk.profiler.monitorlocks.enabled",
+            "Export jdk.JavaMonitorWait events as OTLP logs.",
+            "false",
+            SettingType.BOOLEAN,
             SettingCategory.PROFILER));
     settings.add(
         setting(
