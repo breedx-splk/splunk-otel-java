@@ -36,6 +36,7 @@ public final class ProfilerEnvVarsConfigurationFactory {
   static final String CONFIG_KEY_KEEP_FILES = "splunk.profiler.keep-files";
   static final String CONFIG_KEY_INGEST_URL = "splunk.profiler.logs-endpoint";
   static final String CONFIG_KEY_PROFILER_OTLP_PROTOCOL = "splunk.profiler.otlp.protocol";
+  static final String CONFIG_KEY_MONITOR_LOCKS_ENABLED = "splunk.profiler.monitorlocks.enabled";
   static final String CONFIG_KEY_MEMORY_ENABLED = "splunk.profiler.memory.enabled";
   static final String CONFIG_KEY_MEMORY_EVENT_RATE_LIMIT_ENABLED =
       "splunk.profiler.memory.event.rate-limit.enabled";
@@ -68,6 +69,7 @@ public final class ProfilerEnvVarsConfigurationFactory {
         .setEnabled(config.getBoolean(CONFIG_KEY_PROFILER_ENABLED, false))
         .setIngestUrl(getIngestUrl(config, otlpProtocol))
         .setOtlpProtocol(otlpProtocol)
+        .setMonitorLocksEnabled(config.getBoolean(CONFIG_KEY_MONITOR_LOCKS_ENABLED, false))
         .setMemoryEnabled(config.getBoolean(CONFIG_KEY_MEMORY_ENABLED, false))
         .setMemoryEventRateLimitEnabled(
             config.getBoolean(CONFIG_KEY_MEMORY_EVENT_RATE_LIMIT_ENABLED, true))

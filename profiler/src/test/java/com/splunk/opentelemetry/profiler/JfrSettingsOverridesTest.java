@@ -49,9 +49,10 @@ class JfrSettingsOverridesTest {
     assertNotSame(result, jfrSettings);
     assertThat(result.get("jdk.ThreadDump#period")).isEqualTo("163 ms");
     assertThat(result.get("jdk.ThreadDump#enabled")).isEqualTo("true");
+    assertThat(result.get("jdk.JavaMonitorWait#enabled")).isEqualTo("false");
     assertThat(result.get("jdk.ObjectAllocationInNewTLAB#enabled")).isEqualTo("true");
     assertThat(result.get("jdk.ObjectAllocationOutsideTLAB#enabled")).isEqualTo("true");
-    assertThat(result).hasSize(4);
+    assertThat(result).hasSize(5);
   }
 
   @Test
@@ -79,9 +80,10 @@ class JfrSettingsOverridesTest {
     assertNotSame(result, jfrSettings);
     assertThat(result.get("jdk.ThreadDump#period")).isEqualTo("163 ms");
     assertThat(result.get("jdk.ThreadDump#enabled")).isEqualTo("true");
+    assertThat(result.get("jdk.JavaMonitorWait#enabled")).isEqualTo("false");
     assertThat(result.get("jdk.ObjectAllocationSample#enabled")).isEqualTo("true");
     assertThat(result.get("jdk.ObjectAllocationSample#throttle")).isEqualTo("200/s");
-    assertThat(result).hasSize(4);
+    assertThat(result).hasSize(5);
   }
 
   @Test
@@ -104,6 +106,19 @@ class JfrSettingsOverridesTest {
     assertNotSame(result, jfrSettings);
     assertThat(result.get("jdk.ThreadDump#period")).isEqualTo("12");
     assertThat(result.get("jdk.ThreadDump#enabled")).isEqualTo("false");
-    assertThat(result).hasSize(2);
+    assertThat(result.get("jdk.JavaMonitorWait#enabled")).isEqualTo("false");
+    assertThat(result).hasSize(3);
+  }
+
+  @Test
+  void shouldEnableMonitorLocksOnlyWhenConfigured() {
+    ProfilerConfiguration config = mock(ProfilerConfiguration.class);
+    when(config.getCallStackInterval()).thenReturn(Duration.ZERO);
+    when(config.getMonitorLocksEnabled()).thenReturn(true);
+
+    Map<String, String> result =
+        new JfrSettingsOverrides(config).apply(Map.of("jdk.JavaMonitorWait#enabled", "false"));
+
+    assertThat(result.get("jdk.JavaMonitorWait#enabled")).isEqualTo("true");
   }
 }
