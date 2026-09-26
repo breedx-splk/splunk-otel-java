@@ -25,6 +25,7 @@ import com.splunk.opentelemetry.profiler.exporter.CpuEventExporter;
 import com.splunk.opentelemetry.profiler.exporter.PprofCpuEventExporter;
 import com.splunk.opentelemetry.profiler.util.DeclarativeConfigPropertiesUtil;
 import io.opentelemetry.api.incubator.config.DeclarativeConfigProperties;
+import io.opentelemetry.api.logs.Logger;
 import io.opentelemetry.sdk.logs.LogRecordProcessor;
 import io.opentelemetry.sdk.logs.SdkLoggerProvider;
 import io.opentelemetry.sdk.logs.export.LogRecordExporter;
@@ -89,12 +90,23 @@ class PeriodicRecordingFlusherFactory {
             .stackTraceFilter(stackTraceFilter)
             .build();
 
+    Logger monitorWaitLogger =
+        buildOtelMonitorWaitLogger(SimpleLogRecordProcessor.create(logsExporter), resource);
+    MonitorWaitProcessor monitorWaitProcessor = new MonitorWaitProcessor(monitorWaitLogger);
+
     EventProcessingChain eventProcessingChain =
         new EventProcessingChain(
-            eventReader, spanContextualizer, threadDumpProcessor, tlabProcessor);
+            eventReader,
+            spanContextualizer,
+            threadDumpProcessor,
+            tlabProcessor,
+            monitorWaitProcessor);
 
     JfrRecordingHandler jfrRecordingHandler =
-        JfrRecordingHandler.builder().eventProcessingChain(eventProcessingChain).build();
+        JfrRecordingHandler.builder()
+            .eventProcessingChain(eventProcessingChain)
+            .monitorLocksEnabled(config.getMonitorLocksEnabled())
+            .build();
 
     JfrRecorder recorder =
         JfrRecorder.builder()
@@ -116,6 +128,17 @@ class PeriodicRecordingFlusherFactory {
         .setResource(resource)
         .build()
         .loggerBuilder(ProfilingSemanticAttributes.OTEL_INSTRUMENTATION_NAME)
+        .setInstrumentationVersion(ProfilingSemanticAttributes.OTEL_INSTRUMENTATION_VERSION)
+        .build();
+  }
+
+  private io.opentelemetry.api.logs.Logger buildOtelMonitorWaitLogger(
+      LogRecordProcessor logProcessor, Resource resource) {
+    return SdkLoggerProvider.builder()
+        .addLogRecordProcessor(logProcessor)
+        .setResource(resource)
+        .build()
+        .loggerBuilder(MonitorWaitProcessor.INSTRUMENTATION_SCOPE_NAME)
         .setInstrumentationVersion(ProfilingSemanticAttributes.OTEL_INSTRUMENTATION_VERSION)
         .build();
   }

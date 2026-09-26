@@ -40,6 +40,7 @@ class EventProcessingChain {
   private final SpanContextualizer spanContextualizer;
   private final ThreadDumpProcessor threadDumpProcessor;
   private final TLABProcessor tlabProcessor;
+  private final MonitorWaitProcessor monitorWaitProcessor;
   private final List<IItem> buffer = new ArrayList<>();
   private final EventStats eventStats =
       logger.isLoggable(FINE) ? new EventStatsImpl() : new NoOpEventStats();
@@ -48,11 +49,13 @@ class EventProcessingChain {
       EventReader eventReader,
       SpanContextualizer spanContextualizer,
       ThreadDumpProcessor threadDumpProcessor,
-      TLABProcessor tlabProcessor) {
+      TLABProcessor tlabProcessor,
+      MonitorWaitProcessor monitorWaitProcessor) {
     this.eventReader = eventReader;
     this.spanContextualizer = spanContextualizer;
     this.threadDumpProcessor = threadDumpProcessor;
     this.tlabProcessor = tlabProcessor;
+    this.monitorWaitProcessor = monitorWaitProcessor;
   }
 
   void accept(IItem event) {
@@ -116,6 +119,9 @@ class EventProcessingChain {
         try (EventTimer eventTimer = eventStats.time(eventName)) {
           tlabProcessor.accept(event);
         }
+        break;
+      case MonitorWaitProcessor.EVENT_NAME:
+        monitorWaitProcessor.accept(event);
         break;
     }
   }

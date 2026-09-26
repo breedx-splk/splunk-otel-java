@@ -27,6 +27,13 @@ import org.junit.jupiter.api.Test;
 class JfrSettingsReaderTest {
 
   @Test
+  void monitorWaitThresholdDefaultsTo20Milliseconds() {
+    Map<String, String> settings = new JfrSettingsReader().read();
+
+    assertEquals("20 ms", settings.get("jdk.JavaMonitorWait#threshold"));
+  }
+
+  @Test
   void testReader() {
     String content =
         "jdk.EvacuationFailed#enabled=true\n"

@@ -31,6 +31,7 @@ class ProfilerConfigurationTest {
             .setEnabled(true)
             .setIngestUrl("https://logs.example.com")
             .setOtlpProtocol("grpc")
+            .setMonitorLocksEnabled(true)
             .setMemoryEnabled(true)
             .setMemoryEventRateLimitEnabled(false)
             .setMemoryEventRate("250/s")
@@ -63,6 +64,7 @@ class ProfilerConfigurationTest {
             .setEnabled(false)
             .setIngestUrl("https://logs.example.com")
             .setOtlpProtocol("grpc")
+            .setMonitorLocksEnabled(true)
             .setMemoryEnabled(true)
             .setMemoryEventRateLimitEnabled(false)
             .setMemoryEventRate("250/s")
@@ -83,6 +85,7 @@ class ProfilerConfigurationTest {
             .setEnabled(true)
             .setIngestUrl("https://mutated-logs.example.com")
             .setOtlpProtocol("http/protobuf")
+            .setMonitorLocksEnabled(false)
             .setMemoryEnabled(false)
             .setMemoryEventRateLimitEnabled(true)
             .setMemoryEventRate("333/s")
@@ -102,6 +105,7 @@ class ProfilerConfigurationTest {
     assertThat(copy.isEnabled()).isTrue();
     assertThat(copy.getIngestUrl()).isEqualTo("https://mutated-logs.example.com");
     assertThat(copy.getOtlpProtocol()).isEqualTo("http/protobuf");
+    assertThat(copy.getMonitorLocksEnabled()).isFalse();
     assertThat(copy.getMemoryEnabled()).isFalse();
     assertThat(copy.getMemoryEventRateLimitEnabled()).isTrue();
     assertThat(copy.getMemoryEventRate()).isEqualTo("333/s");

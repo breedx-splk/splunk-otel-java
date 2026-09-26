@@ -54,6 +54,7 @@ class EventProcessingChainTest {
   @Mock SpanContextualizer contextualizer;
   @Mock ThreadDumpProcessor threadDumpProcessor;
   @Mock TLABProcessor tlabProcessor;
+  @Mock MonitorWaitProcessor monitorWaitProcessor;
 
   @Test
   void testLifecycle() {
@@ -70,7 +71,8 @@ class EventProcessingChainTest {
     IItem threadDump = newEvent(threadDumpType, now.minus(250, ChronoUnit.MILLIS));
 
     EventProcessingChain chain =
-        new EventProcessingChain(eventReader, contextualizer, threadDumpProcessor, tlabProcessor);
+        new EventProcessingChain(
+            eventReader, contextualizer, threadDumpProcessor, tlabProcessor, monitorWaitProcessor);
     chain.accept(tlab1);
     chain.accept(contextEvent);
     chain.accept(tlab2);
@@ -103,7 +105,8 @@ class EventProcessingChainTest {
     // Expectation is that we see them dispatched in the correct order.
 
     EventProcessingChain chain =
-        new EventProcessingChain(eventReader, contextualizer, threadDumpProcessor, tlabProcessor);
+        new EventProcessingChain(
+            eventReader, contextualizer, threadDumpProcessor, tlabProcessor, monitorWaitProcessor);
     chain.accept(event2); // Out of order
     chain.accept(event1); // Out of order
     chain.accept(event3);
@@ -142,7 +145,8 @@ class EventProcessingChainTest {
             .sampler(sampler)
             .build();
     EventProcessingChain chain =
-        new EventProcessingChain(eventReader, contextualizer, threadDumpProcessor, processor);
+        new EventProcessingChain(
+            eventReader, contextualizer, threadDumpProcessor, processor, monitorWaitProcessor);
     for (IItem event : events) {
       chain.accept(event);
     }

@@ -47,7 +47,7 @@ class JfrRecordingHandler implements Consumer<InputStream> {
 
   private static final Logger logger = Logger.getLogger(JfrRecordingHandler.class.getName());
   // set of accepted event types
-  private static final Set<String> eventTypes =
+  private static final Set<String> DEFAULT_EVENT_TYPES =
       new HashSet<>(
           Arrays.asList(
               ContextAttached.EVENT_NAME,
@@ -55,10 +55,15 @@ class JfrRecordingHandler implements Consumer<InputStream> {
               TLABProcessor.NEW_TLAB_EVENT_NAME,
               TLABProcessor.OUTSIDE_TLAB_EVENT_NAME,
               TLABProcessor.ALLOCATION_SAMPLE_EVENT_NAME));
+  private final Set<String> eventTypes;
   private final EventProcessingChain eventProcessingChain;
 
   public JfrRecordingHandler(Builder builder) {
     this.eventProcessingChain = builder.eventProcessingChain;
+    this.eventTypes = new HashSet<>(DEFAULT_EVENT_TYPES);
+    if (builder.monitorLocksEnabled) {
+      eventTypes.add(MonitorWaitProcessor.EVENT_NAME);
+    }
   }
 
   @Override
@@ -80,7 +85,7 @@ class JfrRecordingHandler implements Consumer<InputStream> {
 
         for (EventArray eventArray : context.buildEventArrays().getArrays()) {
           IType<IItem> type = eventArray.getType();
-          if (eventTypes.contains(type.getIdentifier())) {
+          if (acceptsEventType(type.getIdentifier())) {
             Arrays.asList(eventArray.getEvents()).forEach(eventProcessingChain::accept);
           }
         }
@@ -97,6 +102,10 @@ class JfrRecordingHandler implements Consumer<InputStream> {
       }
       eventProcessingChain.logEventStats();
     }
+  }
+
+  boolean acceptsEventType(String eventType) {
+    return eventTypes.contains(eventType);
   }
 
   @Nullable
@@ -125,9 +134,15 @@ class JfrRecordingHandler implements Consumer<InputStream> {
 
   public static class Builder {
     private EventProcessingChain eventProcessingChain;
+    private boolean monitorLocksEnabled;
 
     public Builder eventProcessingChain(EventProcessingChain eventProcessingChain) {
       this.eventProcessingChain = eventProcessingChain;
+      return this;
+    }
+
+    public Builder monitorLocksEnabled(boolean monitorLocksEnabled) {
+      this.monitorLocksEnabled = monitorLocksEnabled;
       return this;
     }
 

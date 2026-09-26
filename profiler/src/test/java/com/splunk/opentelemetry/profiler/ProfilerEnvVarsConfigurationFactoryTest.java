@@ -47,6 +47,7 @@ class ProfilerEnvVarsConfigurationFactoryTest {
                 Map.entry("splunk.profiler.keep-files", "true"),
                 Map.entry("splunk.profiler.logs-endpoint", logsEndpoint),
                 Map.entry("splunk.profiler.otlp.protocol", "grpc"),
+                Map.entry("splunk.profiler.monitorlocks.enabled", "true"),
                 Map.entry("splunk.profiler.memory.enabled", "true"),
                 Map.entry("splunk.profiler.memory.event.rate-limit.enabled", "true"),
                 Map.entry("splunk.profiler.memory.event.rate", "250/s"),
@@ -63,6 +64,7 @@ class ProfilerEnvVarsConfigurationFactoryTest {
     assertThat(profilerConfiguration.isEnabled()).isTrue();
     assertThat(profilerConfiguration.getIngestUrl()).isEqualTo(logsEndpoint);
     assertThat(profilerConfiguration.getOtlpProtocol()).isEqualTo("grpc");
+    assertThat(profilerConfiguration.getMonitorLocksEnabled()).isTrue();
     assertThat(profilerConfiguration.getMemoryEnabled()).isTrue();
     assertThat(profilerConfiguration.getMemoryEventRateLimitEnabled()).isTrue();
     assertThat(profilerConfiguration.getMemoryEventRate()).isEqualTo("250/s");
@@ -77,6 +79,14 @@ class ProfilerEnvVarsConfigurationFactoryTest {
     assertThat(profilerConfiguration.getProfilerDirectory()).isEqualTo("/tmp/prof");
     assertThat(profilerConfiguration.getRecordingDuration()).isEqualTo(Duration.ofMillis(12345));
     assertThat(profilerConfiguration.getConfigProperties()).isSameAs(configProperties);
+  }
+
+  @Test
+  void monitorLocksShouldBeDisabledByDefault() {
+    ProfilerConfiguration profilerConfiguration =
+        ProfilerEnvVarsConfigurationFactory.create(config(Collections.emptyMap()));
+
+    assertThat(profilerConfiguration.getMonitorLocksEnabled()).isFalse();
   }
 
   @Test

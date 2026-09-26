@@ -3,3 +3,5 @@ jdk.ThreadDump#period=10 s
 jdk.ObjectAllocationInNewTLAB#enabled=false
 jdk.ObjectAllocationOutsideTLAB#enabled=false
 jdk.ObjectAllocationSample#enabled=false
+jdk.JavaMonitorWait#enabled=false
+jdk.JavaMonitorWait#threshold=20 ms
